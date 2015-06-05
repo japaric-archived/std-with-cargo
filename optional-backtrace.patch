@@ -1,0 +1,26 @@
+diff --git a/src/libstd/sys/unix/mod.rs b/src/libstd/sys/unix/mod.rs
+index c1a4e8c..ae21c02 100644
+--- a/src/libstd/sys/unix/mod.rs
++++ b/src/libstd/sys/unix/mod.rs
+@@ -28,7 +28,21 @@ use ops::Neg;
+ #[cfg(target_os = "nacl")]      pub use os::nacl as platform;
+ #[cfg(target_os = "openbsd")]   pub use os::openbsd as platform;
+ 
++#[cfg(feature = "backtrace")]
+ pub mod backtrace;
++
++#[cfg(not(feature = "backtrace"))]
++pub mod backtrace {
++    use prelude::v1::*;
++    use io::prelude::*;
++
++    use io;
++
++    pub fn write(_: &mut Write) -> io::Result<()> {
++        Ok(())
++    }
++}
++
+ pub mod c;
+ pub mod condvar;
+ pub mod ext;
