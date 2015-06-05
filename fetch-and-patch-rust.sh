@@ -29,8 +29,7 @@ mv compiler-rt-${HASH} compiler-rt
 rm ${HASH}.zip
 
 # patch
-# TODO fetch patch from github
 cd ..
-patch -p1 < ../cargo-ify.patch
-patch -p1 < ../optional-backtrace.patch
-patch -p1 < ../remove-mno-compact-eh-flag.patch
+curl -s https://raw.githubusercontent.com/japaric/std-with-cargo/master/cargo-ify.patch | patch -p1
+curl -s https://raw.githubusercontent.com/japaric/std-with-cargo/master/optional-backtrace.patch | patch -p1
+curl -s https://raw.githubusercontent.com/japaric/std-with-cargo/master/remove-mno-compact-eh-flag.patch | patch -p1
