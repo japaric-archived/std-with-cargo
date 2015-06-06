@@ -1,0 +1,31 @@
+diff --git a/src/liballoc/heap.rs b/src/liballoc/heap.rs
+index e155dc8..5ce5a9c 100644
+--- a/src/liballoc/heap.rs
++++ b/src/liballoc/heap.rs
+@@ -197,7 +197,7 @@ mod imp {
+ 
+ #[cfg(all(not(feature = "external_funcs"),
+           not(feature = "external_crate"),
+-          jemalloc))]
++          feature = "jemalloc"))]
+ mod imp {
+     use core::option::Option;
+     use core::option::Option::None;
+@@ -278,7 +278,7 @@ mod imp {
+ 
+ #[cfg(all(not(feature = "external_funcs"),
+           not(feature = "external_crate"),
+-          not(jemalloc),
++          not(feature = "jemalloc"),
+           unix))]
+ mod imp {
+     use core::cmp;
+@@ -342,7 +342,7 @@ mod imp {
+ 
+ #[cfg(all(not(feature = "external_funcs"),
+           not(feature = "external_crate"),
+-          not(jemalloc),
++          not(feature = "jemalloc"),
+           windows))]
+ mod imp {
+     use libc::{c_void, size_t};

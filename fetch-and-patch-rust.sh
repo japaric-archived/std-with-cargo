@@ -28,8 +28,19 @@ unzip ${HASH}.zip
 mv compiler-rt-${HASH} compiler-rt
 rm ${HASH}.zip
 
+# fetch jemalloc
+# XXX as above this is not 100% correct, but the module hasn't been updated in
+# months
+HASH=e24a1a025a1f214e40eedafe3b9c7b1d69937922
+rmdir jemalloc
+wget "https://github.com/rust-lang/jemalloc/archive/${HASH}.zip"
+unzip ${HASH}.zip
+mv jemalloc-${HASH} jemalloc
+rm ${HASH}.zip
+
 # patch
 cd ..
 curl -s https://raw.githubusercontent.com/japaric/std-with-cargo/master/cargo-ify.patch | patch -p1
 curl -s https://raw.githubusercontent.com/japaric/std-with-cargo/master/optional-backtrace.patch | patch -p1
+curl -s https://raw.githubusercontent.com/japaric/std-with-cargo/master/optional-jemalloc.patch | patch -p1
 curl -s https://raw.githubusercontent.com/japaric/std-with-cargo/master/remove-mno-compact-eh-flag.patch | patch -p1

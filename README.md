@@ -154,6 +154,9 @@ The `remove-mno-compact-eh-flag.patch` only matters if you are targeting the
 The `optional-backtrace.patch` modifies Rust source code to allow disabling backtrace support via a
 cargo feature.
 
+The `optional-jemalloc.patch` modifies Rust source code to allow picking between malloc and
+jemalloc via a cargo feature.
+
 ## Known limitations
 
 ### Huge binaries in debug profile

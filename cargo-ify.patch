@@ -1,34 +1,226 @@
 diff --git a/src/liballoc/Cargo.toml b/src/liballoc/Cargo.toml
 new file mode 100644
-index 0000000..4123179
+index 0000000..e84471e
 --- /dev/null
 +++ b/src/liballoc/Cargo.toml
-@@ -0,0 +1,19 @@
+@@ -0,0 +1,18 @@
 +[package]
 +authors = ["The Rust Project Developers"]
++build = "build.rs"
 +name = "alloc"
 +version = "0.0.0"
 +
 +[lib]
 +name = "alloc"
 +path = "lib.rs"
++
++[features]
++jemalloc = []
 +
 +[dependencies.core]
 +path = "../libcore"
 +
 +[dependencies.libc]
 +path = "../liblibc"
+diff --git a/src/liballoc/build.rs b/src/liballoc/build.rs
+new file mode 100644
+index 0000000..3d92f8c
+--- /dev/null
++++ b/src/liballoc/build.rs
+@@ -0,0 +1,187 @@
++#![allow(dead_code)]
 +
-+# TODO jemalloc support, in both static and dynamic flavors
-+#[features]
-+#default = ["jemalloc"]
-+#jemalloc = []
++use std::fs::File;
++use std::io::Read;
++use std::ops::Range;
++use std::path::{Path, PathBuf};
++use std::process::Command;
++use std::{env, fs, iter};
++
++fn main() {
++    let ref ctxt = Ctxt::new().unwrap();
++
++    println!("cargo:rustc-link-search=native={}", ctxt.dst().display());
++
++    match () {
++        #[cfg(feature = "jemalloc")]
++        () => jemalloc(ctxt),
++        #[cfg(not(feature = "jemalloc"))]
++        () => {},
++    }
++}
++
++struct Cflags<'a> {
++    host: Option<std::str::Split<'a, char>>,
++    target: iter::Peekable<std::str::Split<'a, char>>,
++}
++
++impl<'a> Iterator for Cflags<'a> {
++    type Item = &'a str;
++
++    // Host flags may look like: "-O2 -pipe", target flags may look like "-Wall -fPIC $(CFLAGS)"
++    // Collecting this iterator should give you: ["-Wall", "-fPIC", "-O2", "-pipe"]
++    fn next(&mut self) -> Option<&'a str> {
++        if self.target.peek() == Some(&"$(CFLAGS)") {
++            self.host.as_mut().and_then(|it| it.next()).or_else(|| {
++                self.target.next();  // drop $(CFLAGS)
++                self.target.next()
++            })
++        } else {
++            self.target.next()
++        }
++    }
++}
++
++struct Ctxt {
++    ar: String,
++    cc: String,
++    cfg: String,
++    cfg_cflags: Range<usize>,
++    cflags: Option<String>,
++    dst: PathBuf,
++    host: String,
++    src: PathBuf,
++    target: String,
++}
++
++impl Ctxt {
++    fn new() -> Result<Ctxt, String> {
++        // mips-unknown-linux-gnu
++        let target = try!(env::var("TARGET").map_err(|_| "cargo bug: $TARGET not set"));
++
++        // mips_unknown_linux_gnu
++        let target_ = target.replace("-", "_");
++
++        // x86_64-unknown-linux-gnu
++        let host = try!(env::var("HOST").map_err(|_| "cargo bug: $HOST not set"));
++
++        // mips-openwrt-linux-ar
++        let ar = {
++            let ref var = format!("AR_{}", target_);
++            try!(env::var(var).map_err(|_| format!("error: {} not set", var)))
++        };
++
++        // mips-openwrt-linux-gcc
++        let cc = {
++            let ref var = format!("CC_{}", target_);
++            try!(env::var(var).map_err(|_| format!("error: {} not set", var)))
++        };
++
++        let src = PathBuf::from(try!(env::var("CARGO_MANIFEST_DIR").map_err(|_| {
++            "cargo bug: $CARGO_MANIFEST_DIR not set"
++        })));
++
++        let dst = PathBuf::from(try!(env::var("OUT_DIR").map_err(|_| {
++            "cargo bug: $OUT_DIR not set"
++        })));
++
++        let cflags = env::var("CFLAGS").ok();
++
++        let mut cfg = String::new();
++        try! {
++            File::open(format!("../../mk/cfg/{}.mk", target))
++                .and_then(|mut f| {
++                    f.read_to_string(&mut cfg).map(|_| {})
++                })
++                .map_err(|_| format!("error: couldn't read {}.mk", target))
++        }
++
++        // CFG_JEMALLOC_CFLAGS_$(TARGET_) := $(CFLAGS)
++        let cfg_cflags = try!(cfg.find("CFG_JEMALLOC_CFLAGS_").and_then(|sol| {
++            cfg[sol..].find(":= ").and_then(|start| {
++                cfg[sol+start..].find("\n").and_then(|end| {
++                    Some(sol+start+":= ".len()..sol+start+end)
++                })
++            })
++        }).ok_or(format!("couldn't find CFLAGS in {}.mk", target)));
++
++        Ok(Ctxt {
++            ar: ar,
++            cc: cc,
++            cfg: cfg,
++            cfg_cflags: cfg_cflags,
++            cflags: cflags,
++            dst: dst,
++            host: host,
++            src: src,
++            target: target,
++        })
++    }
++
++    fn ar(&self) -> &str {
++        &self.ar
++    }
++
++    fn cc(&self) -> &str {
++        &self.cc
++    }
++
++    fn cflags(&self) -> Cflags {
++        Cflags {
++            host: self.cflags.as_ref().map(|s| s.split(' ')),
++            target: self.cfg[self.cfg_cflags.clone()].trim().split(' ').peekable()
++        }
++    }
++
++    fn dst(&self) -> &Path {
++        &self.dst
++    }
++
++    fn host(&self) -> &str {
++        &self.host
++    }
++
++    fn src(&self) -> &Path {
++        &self.src
++    }
++
++    fn target(&self) -> &str {
++        &self.target
++    }
++}
++
++/// Build `libjemalloc`
++// see mk/rt.mk
++fn jemalloc(ctxt: &Ctxt) {
++    let ar = ctxt.ar();
++    let ref dst = ctxt.dst().join("jemalloc");
++    let ref src = ctxt.src().join("../jemalloc");
++
++    fs::create_dir_all(dst).ok();
++
++    assert! {
++        Command::new(src.join("configure"))
++            .current_dir(dst)
++            .arg("--with-jemalloc-prefix=je_")
++            .arg("--disable-fill")  // see CFG_JEMALLOC_FLAGS at mk/main.mk
++            .arg(format!("--build={}", ctxt.host()))
++            .arg(format!("--host={}", ctxt.target()))
++            .arg(format!("CC={} {}", ctxt.cc(), ctxt.cflags().collect::<Vec<_>>().connect(" ")))
++            .arg(format!("AR={}", ar))
++            .arg(format!("RANLIB={} s", ar))
++            .arg(format!("CPPFLAGS=-I {}", ctxt.src().join("../rt/").display()))
++            .arg("EXTRA_CFLAGS=-g1 -ffunction-sections -fdata-sections")
++            .status().unwrap().success()
++    }
++
++    assert! {
++        Command::new("make")
++            .arg("-C").arg(dst)
++            .arg("build_lib_static")
++            .status().unwrap().success()
++    }
++
++    fs::copy(dst.join("lib/libjemalloc_pic.a"), ctxt.dst().join("libjemalloc.a")).unwrap();
++
++    println!("cargo:rustc-link-lib=static=jemalloc");
++}
 diff --git a/src/libcollections/Cargo.toml b/src/libcollections/Cargo.toml
 new file mode 100644
-index 0000000..7ccfae4
+index 0000000..a421ffc
 --- /dev/null
 +++ b/src/libcollections/Cargo.toml
-@@ -0,0 +1,17 @@
+@@ -0,0 +1,20 @@
 +[package]
 +authors = ["The Rust Project Developers"]
 +name = "collections"
@@ -37,6 +229,9 @@ index 0000000..7ccfae4
 +[lib]
 +name = "collections"
 +path = "lib.rs"
++
++[features]
++jemalloc = ["alloc/jemalloc"]
 +
 +[dependencies.alloc]
 +path = "../liballoc"
@@ -127,10 +322,10 @@ index 0000000..52dfb2e
 +path = "../libcore"
 diff --git a/src/libstd/Cargo.toml b/src/libstd/Cargo.toml
 new file mode 100644
-index 0000000..b0a1e20
+index 0000000..0c25516
 --- /dev/null
 +++ b/src/libstd/Cargo.toml
-@@ -0,0 +1,37 @@
+@@ -0,0 +1,38 @@
 +[package]
 +authors = ["The Rust Project Developers"]
 +build = "build.rs"
@@ -143,6 +338,7 @@ index 0000000..b0a1e20
 +
 +[features]
 +backtrace = []
++jemalloc = ["alloc/jemalloc", "collections/jemalloc"]
 +#default = ["backtrace"]
 +
 +[build_dependencies]
@@ -170,10 +366,10 @@ index 0000000..b0a1e20
 +path = "../librustc_unicode"
 diff --git a/src/libstd/build.rs b/src/libstd/build.rs
 new file mode 100644
-index 0000000..1660ece
+index 0000000..13400eb
 --- /dev/null
 +++ b/src/libstd/build.rs
-@@ -0,0 +1,307 @@
+@@ -0,0 +1,308 @@
 +#![allow(dead_code)]
 +
 +extern crate gcc;
@@ -264,6 +460,7 @@ index 0000000..1660ece
 +        let src = PathBuf::from(try!(env::var("CARGO_MANIFEST_DIR").map_err(|_| {
 +            "cargo bug: $CARGO_MANIFEST_DIR not set"
 +        })));
++
 +        let dst = PathBuf::from(try!(env::var("OUT_DIR").map_err(|_| {
 +            "cargo bug: $OUT_DIR not set"
 +        })));
