@@ -20,11 +20,15 @@ cat >>Cargo.toml <<EOF
 path = "../libstd"
 EOF
 
-if [[ $BACKTRACE = yes && $JEMALLOC = yes ]]; then
-    echo 'features = ["backtrace", "jemalloc"]' >> Cargo.toml
+if [[ $BACKTRACE = yes && $JEMALLOC = dynamic ]]; then
+    echo 'features = ["backtrace", "jemalloc_dynamic"]' >> Cargo.toml
 elif [[ $BACKTRACE = yes && $JEMALLOC = no ]]; then
     echo 'features = ["backtrace"]' >> Cargo.toml
-elif [[ $BACKTRACE = no && $JEMALLOC = yes ]]; then
+elif [[ $BACKTRACE = yes && $JEMALLOC = static ]]; then
+    echo 'features = ["backtrace", "jemalloc"]' >> Cargo.toml
+elif [[ $BACKTRACE = no && $JEMALLOC = dynamic ]]; then
+    echo 'features = ["jemalloc_dynamic"]' >> Cargo.toml
+elif [[ $BACKTRACE = no && $JEMALLOC = static ]]; then
     echo 'features = ["jemalloc"]' >> Cargo.toml
 fi
 

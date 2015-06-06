@@ -1,5 +1,5 @@
 diff --git a/src/liballoc/heap.rs b/src/liballoc/heap.rs
-index e155dc8..5ce5a9c 100644
+index e155dc8..00fbe84 100644
 --- a/src/liballoc/heap.rs
 +++ b/src/liballoc/heap.rs
 @@ -197,7 +197,7 @@ mod imp {
@@ -7,25 +7,42 @@ index e155dc8..5ce5a9c 100644
  #[cfg(all(not(feature = "external_funcs"),
            not(feature = "external_crate"),
 -          jemalloc))]
-+          feature = "jemalloc"))]
++          any(feature = "jemalloc", feature = "jemalloc_dynamic")))]
  mod imp {
      use core::option::Option;
      use core::option::Option::None;
-@@ -278,7 +278,7 @@ mod imp {
+@@ -205,10 +205,16 @@ mod imp {
+     use libc::{c_char, c_int, c_void, size_t};
+     use super::MIN_ALIGN;
+ 
++    #[cfg(feature = "jemalloc")]
+     #[link(name = "jemalloc", kind = "static")]
+     #[cfg(not(test))]
+     extern {}
+ 
++    #[cfg(feature = "jemalloc_dynamic")]
++    #[link(name = "jemalloc")]
++    #[cfg(not(test))]
++    extern {}
++
+     extern {
+         #[allocator]
+         fn je_mallocx(size: size_t, flags: c_int) -> *mut c_void;
+@@ -278,7 +284,7 @@ mod imp {
  
  #[cfg(all(not(feature = "external_funcs"),
            not(feature = "external_crate"),
 -          not(jemalloc),
-+          not(feature = "jemalloc"),
++          not(any(feature = "jemalloc", feature = "jemalloc_dynamic")),
            unix))]
  mod imp {
      use core::cmp;
-@@ -342,7 +342,7 @@ mod imp {
+@@ -342,7 +348,7 @@ mod imp {
  
  #[cfg(all(not(feature = "external_funcs"),
            not(feature = "external_crate"),
 -          not(jemalloc),
-+          not(feature = "jemalloc"),
++          not(any(feature = "jemalloc", feature = "jemalloc_dynamic")),
            windows))]
  mod imp {
      use libc::{c_void, size_t};

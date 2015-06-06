@@ -1,9 +1,9 @@
 diff --git a/src/liballoc/Cargo.toml b/src/liballoc/Cargo.toml
 new file mode 100644
-index 0000000..e84471e
+index 0000000..e161e91
 --- /dev/null
 +++ b/src/liballoc/Cargo.toml
-@@ -0,0 +1,18 @@
+@@ -0,0 +1,19 @@
 +[package]
 +authors = ["The Rust Project Developers"]
 +build = "build.rs"
@@ -16,6 +16,7 @@ index 0000000..e84471e
 +
 +[features]
 +jemalloc = []
++jemalloc_dynamic = []
 +
 +[dependencies.core]
 +path = "../libcore"
@@ -24,10 +25,10 @@ index 0000000..e84471e
 +path = "../liblibc"
 diff --git a/src/liballoc/build.rs b/src/liballoc/build.rs
 new file mode 100644
-index 0000000..3d92f8c
+index 0000000..13da524
 --- /dev/null
 +++ b/src/liballoc/build.rs
-@@ -0,0 +1,187 @@
+@@ -0,0 +1,196 @@
 +#![allow(dead_code)]
 +
 +use std::fs::File;
@@ -43,9 +44,11 @@ index 0000000..3d92f8c
 +    println!("cargo:rustc-link-search=native={}", ctxt.dst().display());
 +
 +    match () {
++        #[cfg(feature = "jemalloc_dynamic")]
++        () => jemalloc(ctxt, true),
 +        #[cfg(feature = "jemalloc")]
-+        () => jemalloc(ctxt),
-+        #[cfg(not(feature = "jemalloc"))]
++        () => jemalloc(ctxt, false),
++        #[cfg(all(not(feature = "jemalloc"), not(feature = "jemalloc_dynamic")))]
 +        () => {},
 +    }
 +}
@@ -182,7 +185,7 @@ index 0000000..3d92f8c
 +
 +/// Build `libjemalloc`
 +// see mk/rt.mk
-+fn jemalloc(ctxt: &Ctxt) {
++fn jemalloc(ctxt: &Ctxt, dynamic: bool) {
 +    let ar = ctxt.ar();
 +    let ref dst = ctxt.dst().join("jemalloc");
 +    let ref src = ctxt.src().join("../jemalloc");
@@ -207,20 +210,27 @@ index 0000000..3d92f8c
 +    assert! {
 +        Command::new("make")
 +            .arg("-C").arg(dst)
-+            .arg("build_lib_static")
++            .arg(if dynamic { "build_lib_shared" } else { "build_lib_static" })
 +            .status().unwrap().success()
 +    }
 +
-+    fs::copy(dst.join("lib/libjemalloc_pic.a"), ctxt.dst().join("libjemalloc.a")).unwrap();
++    if dynamic {
++        fs::copy(dst.join("lib/libjemalloc.so.2"), ctxt.dst().join("libjemalloc.so.2")).unwrap();
++        fs::copy(dst.join("lib/libjemalloc.so"), ctxt.dst().join("libjemalloc.so")).unwrap();
 +
-+    println!("cargo:rustc-link-lib=static=jemalloc");
++        println!("cargo:rustc-link-lib=jemalloc");
++    } else {
++        fs::copy(dst.join("lib/libjemalloc_pic.a"), ctxt.dst().join("libjemalloc.a")).unwrap();
++
++        println!("cargo:rustc-link-lib=static=jemalloc");
++    }
 +}
 diff --git a/src/libcollections/Cargo.toml b/src/libcollections/Cargo.toml
 new file mode 100644
-index 0000000..a421ffc
+index 0000000..00964b0
 --- /dev/null
 +++ b/src/libcollections/Cargo.toml
-@@ -0,0 +1,20 @@
+@@ -0,0 +1,21 @@
 +[package]
 +authors = ["The Rust Project Developers"]
 +name = "collections"
@@ -232,6 +242,7 @@ index 0000000..a421ffc
 +
 +[features]
 +jemalloc = ["alloc/jemalloc"]
++jemalloc_dynamic = ["alloc/jemalloc_dynamic"]
 +
 +[dependencies.alloc]
 +path = "../liballoc"
@@ -322,10 +333,10 @@ index 0000000..52dfb2e
 +path = "../libcore"
 diff --git a/src/libstd/Cargo.toml b/src/libstd/Cargo.toml
 new file mode 100644
-index 0000000..0c25516
+index 0000000..cb7a399
 --- /dev/null
 +++ b/src/libstd/Cargo.toml
-@@ -0,0 +1,38 @@
+@@ -0,0 +1,39 @@
 +[package]
 +authors = ["The Rust Project Developers"]
 +build = "build.rs"
@@ -339,7 +350,8 @@ index 0000000..0c25516
 +[features]
 +backtrace = []
 +jemalloc = ["alloc/jemalloc", "collections/jemalloc"]
-+#default = ["backtrace"]
++jemalloc_dynamic = ["alloc/jemalloc_dynamic", "collections/jemalloc_dynamic"]
++#default = ["backtrace", "jemalloc"]
 +
 +[build_dependencies]
 +gcc = "*"

@@ -10,10 +10,12 @@ addons:
 
 env:
   matrix:
+    - BACKTRACE=no JEMALLOC=dynamic
     - BACKTRACE=no JEMALLOC=no
-    - BACKTRACE=no JEMALLOC=yes
+    - BACKTRACE=no JEMALLOC=static
+    - BACKTRACE=yes JEMALLOC=dynamic
     - BACKTRACE=yes JEMALLOC=no
-    - BACKTRACE=yes JEMALLOC=yes
+    - BACKTRACE=yes JEMALLOC=static
 
 install:
   - source .travis.install.sh
