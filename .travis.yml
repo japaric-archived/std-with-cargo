@@ -1,0 +1,22 @@
+language: rust
+rust: nightly
+
+addons:
+  apt:
+    packages:
+    - llvm-3.4
+    sources:
+    - llvm-toolchain-precise-3.5
+
+install:
+  - source .travis.install.sh
+
+script:
+  - ./.travis.script.sh
+
+branches:
+  only: master
+
+notifications:
+  email:
+    on_success: never
