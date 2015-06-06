@@ -64,7 +64,7 @@ To cross compile the `std` crate you'll need:
 
 - Rust nightly channel
 - The usual stuff for cross compilation: toolchain and cross compiled C libraries
-- LLVM, in particular `llvm-mc` should be in your PATH
+- LLVM, in particular both `llvm-mc` and `llc` should be in your PATH
 
 ## How to use
 
