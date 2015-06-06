@@ -8,6 +8,13 @@ addons:
     sources:
     - llvm-toolchain-precise-3.5
 
+env:
+  matrix:
+    - BACKTRACE=no JEMALLOC=no
+    - BACKTRACE=no JEMALLOC=yes
+    - BACKTRACE=yes JEMALLOC=no
+    - BACKTRACE=yes JEMALLOC=yes
+
 install:
   - source .travis.install.sh
 

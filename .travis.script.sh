@@ -18,9 +18,20 @@ EOF
 cat >>Cargo.toml <<EOF
 [dependencies.std]
 path = "../libstd"
+EOF
 
+if [[ $BACKTRACE = yes && $JEMALLOC = yes ]]; then
+    echo 'features = ["backtrace", "jemalloc"]' >> Cargo.toml
+elif [[ $BACKTRACE = yes && $JEMALLOC = no ]]; then
+    echo 'features = ["backtrace"]' >> Cargo.toml
+elif [[ $BACKTRACE = no && $JEMALLOC = yes ]]; then
+    echo 'features = ["jemalloc"]' >> Cargo.toml
+fi
+
+cat >>Cargo.toml <<EOF
 [profile.release]
 lto = true
 EOF
+cat Cargo.toml
 cargo rustc --target=mips-unknown-linux-gnu --release -- -C link-args=-s
 ls -hl target/mips-unknown-linux-gnu/release/hello
