@@ -25,18 +25,30 @@ index 0000000..e161e91
 +path = "../liblibc"
 diff --git a/src/liballoc/build.rs b/src/liballoc/build.rs
 new file mode 100644
-index 0000000..13da524
+index 0000000..7fb1260
 --- /dev/null
 +++ b/src/liballoc/build.rs
-@@ -0,0 +1,196 @@
+@@ -0,0 +1,208 @@
 +#![allow(dead_code)]
 +
 +use std::fs::File;
 +use std::io::Read;
 +use std::ops::Range;
 +use std::path::{Path, PathBuf};
-+use std::process::Command;
++use std::process::{Command, ExitStatus};
 +use std::{env, fs, iter};
++
++trait StatusOrPanic {
++    fn status_or_panic(&mut self) -> ExitStatus;
++}
++
++impl StatusOrPanic for Command {
++    fn status_or_panic(&mut self) -> ExitStatus {
++        self.status().unwrap_or_else(|_| {
++            panic!("error: failed to execute {:?}", self)
++        })
++    }
++}
 +
 +fn main() {
 +    let ref ctxt = Ctxt::new().unwrap();
@@ -204,14 +216,14 @@ index 0000000..13da524
 +            .arg(format!("RANLIB={} s", ar))
 +            .arg(format!("CPPFLAGS=-I {}", ctxt.src().join("../rt/").display()))
 +            .arg("EXTRA_CFLAGS=-g1 -ffunction-sections -fdata-sections")
-+            .status().unwrap().success()
++            .status_or_panic().success()
 +    }
 +
 +    assert! {
 +        Command::new("make")
 +            .arg("-C").arg(dst)
 +            .arg(if dynamic { "build_lib_shared" } else { "build_lib_static" })
-+            .status().unwrap().success()
++            .status_or_panic().success()
 +    }
 +
 +    if dynamic {
@@ -378,10 +390,10 @@ index 0000000..cb7a399
 +path = "../librustc_unicode"
 diff --git a/src/libstd/build.rs b/src/libstd/build.rs
 new file mode 100644
-index 0000000..13400eb
+index 0000000..5f03064
 --- /dev/null
 +++ b/src/libstd/build.rs
-@@ -0,0 +1,308 @@
+@@ -0,0 +1,320 @@
 +#![allow(dead_code)]
 +
 +extern crate gcc;
@@ -391,8 +403,20 @@ index 0000000..13400eb
 +use std::io::{Read, Write};
 +use std::ops::{Range, RangeTo};
 +use std::path::{Path, PathBuf};
-+use std::process::Command;
++use std::process::{Command, ExitStatus};
 +use std::{env, iter};
++
++trait StatusOrPanic {
++    fn status_or_panic(&mut self) -> ExitStatus;
++}
++
++impl StatusOrPanic for Command {
++    fn status_or_panic(&mut self) -> ExitStatus {
++        self.status().unwrap_or_else(|_| {
++            panic!("error: failed to execute {:?}", self)
++        })
++    }
++}
 +
 +fn main() {
 +    let ref ctxt = Ctxt::new().unwrap();
@@ -575,7 +599,7 @@ index 0000000..13400eb
 +            .env("CFLAGS", cflags.connect(" "))
 +            .arg(format!("--target={}", ctxt.target()))
 +            .arg(format!("--host={}", ctxt.host()))
-+            .status().unwrap().success()
++            .status_or_panic().success()
 +    }
 +
 +    let mut options = OpenOptions::new();
@@ -592,7 +616,7 @@ index 0000000..13400eb
 +        Command::new("make")
 +            .arg(format!("INCDIR={}", src.display()))
 +            .arg("-C").arg(build_dir)
-+            .status().unwrap().success()
++            .status_or_panic().success()
 +    }
 +
 +    fs::copy(build_dir.join(".libs/libbacktrace.a"), dst.join("libbacktrace.a")).unwrap();
@@ -613,7 +637,7 @@ index 0000000..13400eb
 +            .arg("-relocation-model=pic")
 +            .arg("-o").arg(dst.join("rust_try.o"))
 +            .arg(src.join("../rt/rust_try.ll"))
-+            .status().unwrap().success()
++            .status_or_panic().success()
 +    }
 +
 +    let mut cmd = Command::new(ctxt.cc());
@@ -626,7 +650,7 @@ index 0000000..13400eb
 +            .arg(src.join(format!("../rt/arch/{}/record_sp.S", ctxt.arch())))
 +            .arg("-c")
 +            .arg("-o").arg(dst.join("record_sp.o"))
-+            .status().unwrap().success()
++            .status_or_panic().success()
 +    }
 +
 +    assert! {
@@ -635,7 +659,7 @@ index 0000000..13400eb
 +            .arg(dst.join("librustrt_native.a"))
 +            .arg(dst.join("rust_try.o"))
 +            .arg(dst.join("record_sp.o"))
-+            .status().unwrap().success()
++            .status_or_panic().success()
 +    }
 +
 +    println!("cargo:rustc-link-lib=static=rustrt_native");
@@ -653,7 +677,7 @@ index 0000000..13400eb
 +            .arg(format!("-triple={}", ctxt.target()))
 +            .arg("-o").arg(dst.join("morestack.o"))
 +            .arg(ctxt.src().join(format!("../rt/arch/{}/morestack.S", ctxt.arch())))
-+            .status().unwrap().success()
++            .status_or_panic().success()
 +    }
 +
 +    assert! {
@@ -661,7 +685,7 @@ index 0000000..13400eb
 +            .arg("crus")
 +            .arg(dst.join("libmorestack.a"))
 +            .arg(dst.join("morestack.o"))
-+            .status().unwrap().success()
++            .status_or_panic().success()
 +    }
 +}
 +
@@ -685,7 +709,7 @@ index 0000000..13400eb
 +            .arg(format!("ProjObjRoot={}", build_dir.display()))
 +            .arg(format!("TargetTriple={}", ctxt.target()))
 +            .arg("triple-builtins")
-+            .status().unwrap().success()
++            .status_or_panic().success()
 +    }
 +
 +    fs::copy(build_dir.join("triple/builtins/libcompiler_rt.a"), dst.join("libcompiler-rt.a")).unwrap();
