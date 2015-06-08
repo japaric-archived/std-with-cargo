@@ -1,3 +1,7 @@
+[![Build Status][status]](https://travis-ci.org/japaric/std-with-cargo)
+
+[status]: https://travis-ci.org/japaric/std-with-cargo.svg?branch=master
+
 # `std-with-cargo`
 
 Cross compile the `std` crate using `cargo`.
@@ -22,8 +26,8 @@ cross compile the `std` crate and co.
 [requirements]: https://github.com/japaric/rust-on-openwrt#cross-compilation-requirements
 
 A much faster way is to use the Rust toolchain that you already have installed, instead of
-bootstrapping a new one, along with `cargo`, this can bring down the build time to less than one
-minute (with full optimizations enabled).
+bootstrapping a new one, along with `cargo`, this can bring down the build time to **less than one
+minute** (with full optimizations enabled).
 
 (1) Unless you are targeting a bare metal (no OS) device, in that case you probably only want a
 cross compiled `core` crate, but theses patches can also help with that use case.
@@ -40,9 +44,9 @@ requiring way more memory than in the statically linked case.
 
 But, why are Rust binaries so large? If you inspect them using `nm --size-sort -S`, you'll find out
 that a good chunk of the binary is jemalloc, and `RUST_BACKTRACE` support. To quantify how much is
-a "good chunk", I tested disabling jemalloc, that brought the size of "hello world" down to 146K,
+a "good chunk", I tested disabling jemalloc, that brought the size of "hello world" down to 146KB,
 and then with a small modification to the `std` crate I also disabled backtrace support, and the
-size of "hello world" went down to 73K, that's a ~75% reduction in size.
+size of "hello world" went down to 73KB, that's a **~75% reduction in size**.
 
 How does `cargo` fit in all this? The changes I mentioned above were implemented using `cargo`
 features, and both jemalloc and backtrace support are now optional features. This means that you
@@ -57,6 +61,12 @@ rather than statically, like all Rust programs do today. This would reduce each 
 while keeping both jemalloc and backtrace support enabled, at the cost of having to install
 `libjemalloc.so` and `libbacktrace.so` in the target device. This option is not provided by the
 Rust build system, but seems doable with `cargo`.
+
+Update: I've added a `jemalloc_dynamic` cargo feature that enables jemalloc but using dynamic
+linking instead of static linking. Some numbers: hello world is 73KB with jemalloc and backtrace
+support *disabled*, enabling `jemalloc` increases the size to 241KB, OTOH enabling `jemalloc_dynamic`
+only increases the size to 77KB at the cost of having to install `libjemalloc.so.2`, which is 351KB
+(or 271KB stripped), in the target device.
 
 ## Dependencies
 
@@ -106,6 +116,8 @@ $ cat Cargo.toml
 path = /path/to/patched/rust/src/lisbtd
 # optionally enable jemalloc and backtrace support
 features = ["jemalloc", "backtrace"]
+# or enable jemalloc in dynamically linked flavor
+#features = ["jemalloc_dynamic"]
 
 # don't forget to enable LTO for smaller binaries
 [profile.release]
