@@ -37,5 +37,5 @@ cat >>Cargo.toml <<EOF
 lto = true
 EOF
 cat Cargo.toml
-cargo rustc --target=mips-unknown-linux-gnu --release -- -C link-args=-s
+cargo rustc --target=mips-unknown-linux-gnu --release --verbose -- -C link-args=-s
 ls -hl target/mips-unknown-linux-gnu/release/hello
