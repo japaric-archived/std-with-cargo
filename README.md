@@ -2,11 +2,6 @@
 
 [status]: https://travis-ci.org/japaric/std-with-cargo.svg?branch=master
 
-**PSA**: `cargo rustc -- -C link-args=-s` doesn't work with nightlies equal or newer than 2015-06-08,
-use `cargo build` for now. See [rust-lang/cargo#1695] for more information.
-
-[rust-lang/cargo#1695]: https://github.com/rust-lang/cargo/issues/1695
-
 # `std-with-cargo`
 
 Cross compile the `std` crate using `cargo`.
