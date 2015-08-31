@@ -1,9 +1,9 @@
 diff --git a/src/libstd/sys/unix/mod.rs b/src/libstd/sys/unix/mod.rs
-index c1a4e8c..ae21c02 100644
+index bbed42c..388d2fc 100644
 --- a/src/libstd/sys/unix/mod.rs
 +++ b/src/libstd/sys/unix/mod.rs
-@@ -28,7 +28,21 @@ use ops::Neg;
- #[cfg(target_os = "nacl")]      pub use os::nacl as platform;
+@@ -27,7 +27,21 @@ use ops::Neg;
+ #[cfg(target_os = "netbsd")]    pub use os::netbsd as platform;
  #[cfg(target_os = "openbsd")]   pub use os::openbsd as platform;
  
 +#[cfg(feature = "backtrace")]
