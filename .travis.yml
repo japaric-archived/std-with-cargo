@@ -1,13 +1,6 @@
 language: rust
 rust: nightly
 
-addons:
-  apt:
-    packages:
-    - llvm-3.4
-    sources:
-    - llvm-toolchain-precise-3.5
-
 env:
   matrix:
     - BACKTRACE=no JEMALLOC=dynamic
