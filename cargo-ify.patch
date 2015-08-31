@@ -25,7 +25,7 @@ index 0000000..e161e91
 +path = "../liblibc"
 diff --git a/src/liballoc/build.rs b/src/liballoc/build.rs
 new file mode 100644
-index 0000000..7fb1260
+index 0000000..ff8a9bd
 --- /dev/null
 +++ b/src/liballoc/build.rs
 @@ -0,0 +1,208 @@
@@ -211,7 +211,7 @@ index 0000000..7fb1260
 +            .arg("--disable-fill")  // see CFG_JEMALLOC_FLAGS at mk/main.mk
 +            .arg(format!("--build={}", ctxt.host()))
 +            .arg(format!("--host={}", ctxt.target()))
-+            .arg(format!("CC={} {}", ctxt.cc(), ctxt.cflags().collect::<Vec<_>>().connect(" ")))
++            .arg(format!("CC={} {}", ctxt.cc(), ctxt.cflags().collect::<Vec<_>>().join(" ")))
 +            .arg(format!("AR={}", ar))
 +            .arg(format!("RANLIB={} s", ar))
 +            .arg(format!("CPPFLAGS=-I {}", ctxt.src().join("../rt/").display()))
@@ -390,10 +390,10 @@ index 0000000..cb7a399
 +path = "../librustc_unicode"
 diff --git a/src/libstd/build.rs b/src/libstd/build.rs
 new file mode 100644
-index 0000000..5f03064
+index 0000000..f80df12
 --- /dev/null
 +++ b/src/libstd/build.rs
-@@ -0,0 +1,320 @@
+@@ -0,0 +1,253 @@
 +#![allow(dead_code)]
 +
 +extern crate gcc;
@@ -428,8 +428,6 @@ index 0000000..5f03064
 +        #[cfg(not(feature = "backtrace"))]
 +        () => {},
 +    }
-+    rustrt_native(ctxt);
-+    morestack(ctxt);
 +    compiler_rt(ctxt);
 +}
 +
@@ -596,7 +594,7 @@ index 0000000..5f03064
 +            .env("AR", ar)
 +            .env("CC", ctxt.cc())
 +            .env("RANLIB", format!("{} s", ar))
-+            .env("CFLAGS", cflags.connect(" "))
++            .env("CFLAGS", cflags.join(" "))
 +            .arg(format!("--target={}", ctxt.target()))
 +            .arg(format!("--host={}", ctxt.host()))
 +            .status_or_panic().success()
@@ -624,71 +622,6 @@ index 0000000..5f03064
 +    println!("cargo:rustc-link-lib=static=backtrace");
 +}
 +
-+/// Build `librustrt_native`
-+// See `mk/rt.mk`
-+fn rustrt_native(ctxt: &Ctxt) {
-+    let dst = ctxt.dst();
-+    let src = ctxt.src();
-+
-+    assert! {
-+        Command::new("llc")
-+            .arg("-filetype=obj")
-+            .arg(format!("-mtriple={}", ctxt.target()))
-+            .arg("-relocation-model=pic")
-+            .arg("-o").arg(dst.join("rust_try.o"))
-+            .arg(src.join("../rt/rust_try.ll"))
-+            .status_or_panic().success()
-+    }
-+
-+    let mut cmd = Command::new(ctxt.cc());
-+    for flag in ctxt.cflags() {
-+        cmd.arg(flag);
-+    }
-+
-+    assert! {
-+        cmd
-+            .arg(src.join(format!("../rt/arch/{}/record_sp.S", ctxt.arch())))
-+            .arg("-c")
-+            .arg("-o").arg(dst.join("record_sp.o"))
-+            .status_or_panic().success()
-+    }
-+
-+    assert! {
-+        Command::new(ctxt.ar())
-+            .arg("crus")
-+            .arg(dst.join("librustrt_native.a"))
-+            .arg(dst.join("rust_try.o"))
-+            .arg(dst.join("record_sp.o"))
-+            .status_or_panic().success()
-+    }
-+
-+    println!("cargo:rustc-link-lib=static=rustrt_native");
-+}
-+
-+/// Build `libmorestack.a`
-+fn morestack(ctxt: &Ctxt) {
-+    let dst = ctxt.dst();
-+
-+    assert! {
-+        Command::new("llvm-mc")
-+            .arg("-assemble")
-+            .arg("-relocation-model=pic")
-+            .arg("-filetype=obj")
-+            .arg(format!("-triple={}", ctxt.target()))
-+            .arg("-o").arg(dst.join("morestack.o"))
-+            .arg(ctxt.src().join(format!("../rt/arch/{}/morestack.S", ctxt.arch())))
-+            .status_or_panic().success()
-+    }
-+
-+    assert! {
-+        Command::new(ctxt.ar())
-+            .arg("crus")
-+            .arg(dst.join("libmorestack.a"))
-+            .arg(dst.join("morestack.o"))
-+            .status_or_panic().success()
-+    }
-+}
-+
 +/// Build `libcompiler_rt.a`
 +// We don't really need this to compile libstd, but most binaries that depend on libstd will try
 +// to link to this library
@@ -703,7 +636,7 @@ index 0000000..5f03064
 +            .arg(format!("CC={}", ctxt.cc()))
 +            .arg(format!("AR={}", ar))
 +            .arg(format!("RANLIB={} s", ar))
-+            .arg(format!("CFLAGS={}", ctxt.cflags().collect::<Vec<_>>().connect(" ")))
++            .arg(format!("CFLAGS={}", ctxt.cflags().collect::<Vec<_>>().join(" ")))
 +            .arg("-C").arg(src)
 +            .arg(format!("ProjSrcRoot={}", src.display()))
 +            .arg(format!("ProjObjRoot={}", build_dir.display()))
