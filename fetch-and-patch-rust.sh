@@ -13,7 +13,7 @@ fi
 
 fetch () {
     if [ "$LOCAL" = 1 ]; then
-        cat "$1"
+        cat ../"$1"
     else
         curl -s https://raw.githubusercontent.com/japaric/std-with-cargo/master/"$1"
     fi
