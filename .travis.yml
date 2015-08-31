@@ -3,12 +3,8 @@ rust: nightly
 
 env:
   matrix:
-    - BACKTRACE=no JEMALLOC=dynamic
     - BACKTRACE=no JEMALLOC=no
-    - BACKTRACE=no JEMALLOC=static
-    - BACKTRACE=yes JEMALLOC=dynamic
     - BACKTRACE=yes JEMALLOC=no
-    - BACKTRACE=yes JEMALLOC=static
 
 install:
   - source .travis.install.sh

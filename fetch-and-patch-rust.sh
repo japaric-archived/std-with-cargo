@@ -54,5 +54,4 @@ rm ${HASH}.zip
 cd ..
 fetch cargo-ify.patch | patch -p1
 fetch optional-backtrace.patch | patch -p1
-fetch optional-jemalloc.patch | patch -p1
 fetch remove-mno-compact-eh-flag.patch | patch -p1
