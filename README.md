@@ -113,7 +113,7 @@ $ cd hello
 $ cat Cargo.toml
 (..)
 [dependencies.std]
-path = /path/to/patched/rust/src/lisbtd
+path = "/path/to/patched/rust/src/libstd"
 # optionally enable jemalloc and backtrace support
 features = ["jemalloc", "backtrace"]
 # or enable jemalloc in dynamically linked flavor
