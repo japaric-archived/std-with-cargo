@@ -1,3 +1,20 @@
+# Status
+
+This project has benn **SUPERSEDED** by [`cargo-sysroot`], a tool to cross compile the standard
+crates in a "sysroot".
+
+[`cargo-sysroot`]: https://github.com/japaric/cargo-sysroot
+
+This project won't receive further updates or bug fixes.
+
+The main reason of the deprecation is that the approach used here of making a crate explicitly
+depend on a standard crate like `std` via a Cargo dependency is, IMO, *not* the right one -- check
+[`cargo-sysroot`] for an explanation and an alternative approach.
+
+-- @japaric, 2016/02/05
+
+---
+
 [![Build Status][status]](https://travis-ci.org/japaric/std-with-cargo)
 
 [status]: https://travis-ci.org/japaric/std-with-cargo.svg?branch=master
