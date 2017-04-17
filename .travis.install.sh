@@ -14,7 +14,7 @@ export PATH="$PWD/$(echo staging_dir/toolchain-*/bin):$PATH"
 mips-openwrt-linux-gcc -v
 popd
 
-./fetch-and-patch-rust.sh
+./fetch-and-patch-rust.sh --local
 
 set +e
 set +x

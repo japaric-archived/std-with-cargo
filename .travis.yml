@@ -1,21 +1,10 @@
 language: rust
 rust: nightly
 
-addons:
-  apt:
-    packages:
-    - llvm-3.4
-    sources:
-    - llvm-toolchain-precise-3.5
-
 env:
   matrix:
-    - BACKTRACE=no JEMALLOC=dynamic
     - BACKTRACE=no JEMALLOC=no
-    - BACKTRACE=no JEMALLOC=static
-    - BACKTRACE=yes JEMALLOC=dynamic
     - BACKTRACE=yes JEMALLOC=no
-    - BACKTRACE=yes JEMALLOC=static
 
 install:
   - source .travis.install.sh

@@ -7,6 +7,18 @@
 set -e
 set -x
 
+if [ $1 == "--local" ]; then
+    LOCAL=1
+fi
+
+fetch () {
+    if [ "$LOCAL" = 1 ]; then
+        cat ../"$1"
+    else
+        curl -s https://raw.githubusercontent.com/japaric/std-with-cargo/master/"$1"
+    fi
+}
+
 # find out `rustc` version
 HASH=$(rustc -Vv | sed -n 3p | cut -d ' ' -f2)
 
@@ -40,7 +52,6 @@ rm ${HASH}.zip
 
 # patch
 cd ..
-curl -s https://raw.githubusercontent.com/japaric/std-with-cargo/master/cargo-ify.patch | patch -p1
-curl -s https://raw.githubusercontent.com/japaric/std-with-cargo/master/optional-backtrace.patch | patch -p1
-curl -s https://raw.githubusercontent.com/japaric/std-with-cargo/master/optional-jemalloc.patch | patch -p1
-curl -s https://raw.githubusercontent.com/japaric/std-with-cargo/master/remove-mno-compact-eh-flag.patch | patch -p1
+fetch cargo-ify.patch | patch -p1
+fetch optional-backtrace.patch | patch -p1
+fetch remove-mno-compact-eh-flag.patch | patch -p1
